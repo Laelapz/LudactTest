@@ -1,11 +1,7 @@
-using System;
 using System.Collections;
-using System.Collections.Generic;
-using TMPro;
 using UnityEngine;
 using UnityEngine.Pool;
 using UnityEngine.SceneManagement;
-using UnityEngine.UI;
 using Random = UnityEngine.Random;
 
 public class ShipSpawner : MonoBehaviour
@@ -18,7 +14,6 @@ public class ShipSpawner : MonoBehaviour
     [SerializeField] private SimulationUI _simulationUI;
     
     [Header("Simulation Variables")]
-    public float FPSUpdateInterval = 0.5f;
     [SerializeField] private float _timeBetweenSpawn = 0.3f;
     [SerializeField] private bool _isPooling = false;
     private int _previousNumber = 0, _nextNumber = 0, _shipsToSpawn = 0, _totalShipsSpawned = 0;
@@ -27,13 +22,13 @@ public class ShipSpawner : MonoBehaviour
     void Start()
     {
         _timeBetweenSpawn = _saveFile.TimeBetweenSpawn;
-        FPSUpdateInterval = _saveFile.FPSUpdateInterval;
         _isPooling = _saveFile.IsPooling;
 
         _simulationUI.StartUI(_saveFile);
 
         _pool = new(() =>
         {
+            _totalShipsSpawned++;
             return Instantiate(_shipPrefab);
         }, shape =>
         {
@@ -120,7 +115,7 @@ public class ShipSpawner : MonoBehaviour
 
         ship.Init(DestroyAction);
         _shipsToSpawn--;
-        _totalShipsSpawned++;
+        if(!_isPooling) _totalShipsSpawned++;
     }
 
     private void DestroyAction(ShipMovement ship)
