@@ -4,28 +4,34 @@ using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.Pool;
+using UnityEngine.SceneManagement;
+using UnityEngine.UI;
 using Random = UnityEngine.Random;
 
 public class ShipSpawner : MonoBehaviour
 {
-
     private ObjectPool<ShipMovement> _pool;
 
     [Header("Simulation Dependencies")]
     [SerializeField] private ShipMovement _shipPrefab;
+    [SerializeField] private SaveSO _saveFile;
+    [SerializeField] private SimulationUI _simulationUI;
     
     [Header("Simulation Variables")]
+    public float FPSUpdateInterval = 0.5f;
     [SerializeField] private float _timeBetweenSpawn = 0.3f;
     [SerializeField] private bool _isPooling = false;
     private int _previousNumber = 0, _nextNumber = 0, _shipsToSpawn = 0, _totalShipsSpawned = 0;
-
-    [Header("UI")]
-    [SerializeField] private TextMeshProUGUI _shipsToSpawnValue;
-    [SerializeField] private TextMeshProUGUI _totalShipsSpawnedValue;
-    [SerializeField] private TextMeshProUGUI _actualFibonacciNumberValue;
+    
 
     void Start()
     {
+        _timeBetweenSpawn = _saveFile.TimeBetweenSpawn;
+        FPSUpdateInterval = _saveFile.FPSUpdateInterval;
+        _isPooling = _saveFile.IsPooling;
+
+        _simulationUI.StartUI(_saveFile);
+
         _pool = new(() =>
         {
             return Instantiate(_shipPrefab);
@@ -41,17 +47,36 @@ public class ShipSpawner : MonoBehaviour
         }, false, 50, 100);
 
         _shipsToSpawn = _previousNumber + _nextNumber;
-        UpdateUI();
         StartCoroutine(SpawnShips());
     }
 
-    private void UpdateUI()
+    public void TogglePool()
     {
-        if (_shipsToSpawnValue) _shipsToSpawnValue.text = _shipsToSpawn.ToString();
-        if (_totalShipsSpawnedValue) _totalShipsSpawnedValue.text = _totalShipsSpawned.ToString();
-        if (_actualFibonacciNumberValue) _actualFibonacciNumberValue.text = (_previousNumber + _nextNumber).ToString();
+        _saveFile.IsPooling = !_isPooling;
+        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
     }
 
+    public void SetTimeBetweenSpawn(float value)
+    {
+        _timeBetweenSpawn = value;
+        _saveFile.TimeBetweenSpawn = value;
+    }
+
+    public void SetFPSUpdateTime(float value)
+    {
+        _saveFile.FPSUpdateInterval = value;
+    }
+
+    private void Update()
+    {
+        _simulationUI.UpdateUI(
+            _pool.CountActive,
+            _pool.CountInactive,
+            _totalShipsSpawned,
+            _shipsToSpawn,
+            _previousNumber + _nextNumber
+        );
+    }
     private IEnumerator SpawnShips()
     {
         yield return new WaitForSeconds(_timeBetweenSpawn);
@@ -59,7 +84,6 @@ public class ShipSpawner : MonoBehaviour
         {
             print("Spawning");
             InstantiateShipPrefab();
-            UpdateUI();
             StartCoroutine(SpawnShips());
         }
         else
@@ -68,9 +92,7 @@ public class ShipSpawner : MonoBehaviour
             {
                 print("Primeira nave a ser spawnada");
                 _shipsToSpawn = 1;
-                UpdateUI();
                 InstantiateShipPrefab();
-                UpdateUI();
                 _shipsToSpawn = 1;
                 _nextNumber = 1;
                 StartCoroutine(SpawnShips());
@@ -81,13 +103,10 @@ public class ShipSpawner : MonoBehaviour
                 var temp = _previousNumber + _nextNumber;
                 _previousNumber = _nextNumber;
                 _nextNumber = temp;
-
                 _shipsToSpawn = _previousNumber + _nextNumber;
 
-                UpdateUI();
                 StartCoroutine(SpawnShips());
             }
-
         }
     }
 
